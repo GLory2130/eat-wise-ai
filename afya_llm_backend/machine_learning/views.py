@@ -1,12 +1,19 @@
 from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
+from django.views.decorators.csrf import csrf_exempt
 import os
 import logging
 import uuid
-from .services import chatbot
+from .services import get_session_history, get_chat_model, get_chat_prompt, load_knowledge_base_content
 
+from langchain_core.runnables import (
+    ConfigurableFieldSpec,
+    RunnablePassthrough,
+)
+from langchain_core.runnables.history import RunnableWithMessageHistory
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -23,7 +30,9 @@ def welcome_view(request):
         }
     }, status=status.HTTP_200_OK)
 
+@csrf_exempt
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def machine_learning_view(request):
     try:
         # Get the message from the request
@@ -77,3 +86,76 @@ def machine_learning_view(request):
         return Response({
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+def chatbot(message: str, config: dict = None):
+    """
+    Process a chat message and return a response
+    
+    Args:
+        message (str): The user's message
+        config (dict): Configuration containing user_id, conversation_id, and knowledge_base
+    """
+    logger.info(f"Processing message: {message}")
+    if config is None:
+        config = {
+            "user_id": "default_user",
+            "conversation_id": "default_conversation",
+            "knowledge_base": ""
+        }
+
+    try:
+        model = get_chat_model()
+        document_path = os.path.join(os.path.dirname(__file__), "..", "generate_rag", "data")
+        # Load the knowledge base content first
+        knowledge_base_content = load_knowledge_base_content(document_path)
+        # Then pass it to get_chat_prompt
+        prompt = get_chat_prompt(knowledge_base_content)
+        
+        chain = prompt | model 
+        
+        chain_with_history = RunnableWithMessageHistory(
+            chain,
+            get_session_history,
+            input_messages_key="question",
+            history_messages_key="history",
+            history_factory_config=[
+                ConfigurableFieldSpec(
+                    id="user_id",
+                    annotation=str,
+                    name="User ID",
+                    description="Unique identifier for the user.",
+                    default="",
+                    is_shared=True,
+                ),
+                ConfigurableFieldSpec(
+                    id="conversation_id",
+                    annotation=str,
+                    name="Conversation ID",
+                    description="Unique identifier for the conversation.",
+                    default="",
+                    is_shared=True,
+                ),
+            ],
+        )
+
+        AI_RESPONSE = chain_with_history.invoke(
+            {
+                "question": message,
+                "knowledge_base": config.get("knowledge_base", ""),
+            },
+            config={
+                "configurable": {
+                    "user_id": config.get("user_id"),
+                    "conversation_id": config.get("conversation_id"),
+                }
+            },
+        )
+
+        # Extract and return only the response text
+        response_text = str(AI_RESPONSE.content)
+        logging.debug(f"AI_RESPONSE: {response_text}")
+        return response_text
+
+    except Exception as e:
+        logging.error(f"Error in chatbot: {str(e)}")
+        raise

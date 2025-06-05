@@ -25,7 +25,8 @@ urlpatterns = [
     path('', redirect_to_chatbot, name='home'),
     path('admin/', admin.site.urls),
     path('chat/', include('frontend.urls')),
-    path('afya/', include('machine_learning.urls')),
-    path('afya/', include('intents.urls')),
-    path('afya/', include('generate_rag.urls')),
+    path('afya/ml/', include('machine_learning.urls')),
+    path('afya/intents/', include('intents.urls')),
+    path('afya/rag/', include('generate_rag.urls')),
+    # path('afya/', include('nutriapi.urls')),
 ]

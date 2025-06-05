@@ -36,3 +36,34 @@ Got ideas? Bugs to squash? New features in mind? Join us! Contributions are warm
 ---
 
 Let’s make healthcare information more accessible, one line of code at a time. 🌍✨
+
+# Knowledge Base Data Directory
+
+This directory contains the knowledge base files used by the NutriChat assistant. Each file should be a text file (`.txt`) containing relevant information about nutrition, health, and diet.
+
+## File Structure
+
+- `nutrition_basics.txt`: Basic nutrition information
+- `diet_guidelines.txt`: General diet guidelines
+- `health_conditions.txt`: Information about various health conditions and their dietary implications
+- `food_groups.txt`: Information about different food groups and their nutritional value
+
+## Adding New Files
+
+1. Create a new `.txt` file in this directory
+2. Add your content in a clear, structured format
+3. The chatbot will automatically include this content in its responses
+
+## File Format
+
+Each file should be plain text with clear sections and headings. For example:
+
+```
+# Section Title
+
+Content goes here...
+
+## Subsection
+
+More content...
+``` 
